@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>Stumble</AssemblyName>
+    <RootNamespace>Stumble</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Version>1.13.0</Version>
+    <!-- Point this at your Hollow Knight install folder. -->
+    <GameDir>C:\Program Files (x86)\Steam\steamapps\common\Hollow Knight</GameDir>
+    <ManagedDir>$(GameDir)\hollow_knight_Data\Managed</ManagedDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Lets you build without the .NET Framework targeting pack installed. -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- The game's assemblies. Assembly-CSharp must be the Modding API version
+       that Lumafly installs, since that's where the Modding namespace lives. -->
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(ManagedDir)\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(ManagedDir)\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.Physics2DModule">
+      <HintPath>$(ManagedDir)\UnityEngine.Physics2DModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Method hooks (On.HeroController...), installed with the Modding API. -->
+  <ItemGroup>
+    <Reference Include="MMHOOK_Assembly-CSharp">
+      <HintPath>$(ManagedDir)\MMHOOK_Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="MonoMod.RuntimeDetour">
+      <HintPath>$(ManagedDir)\MonoMod.RuntimeDetour.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="MonoMod.Utils">
+      <HintPath>$(ManagedDir)\MonoMod.Utils.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- After a build, copy the mod straight into the Modding API's Mods folder. -->
+  <Target Name="CopyToMods" AfterTargets="Build" Condition="Exists('$(ManagedDir)\Mods')">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ManagedDir)\Mods\Stumble" />
+  </Target>
+
+</Project>
