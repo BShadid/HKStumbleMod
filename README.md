@@ -1,6 +1,6 @@
 # Stumble
 
-Every so often while running, our hero trips, fall
+Every so often while running, our hero will trip, fall
 flat on their face, and have to pick themselves back up.
 
 ![Ow.](stumble.gif)
