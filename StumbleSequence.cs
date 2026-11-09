@@ -27,11 +27,11 @@ namespace Stumble
         private const float MaxFallSpeed = 20f;
 
         // How long the Knight may be off the ground without falling before
-        // the mod assumes he's stuck and hands control back.
+        // the mod assumes they're stuck and hands control back.
         private const float MaxStuckInAirTime = 0.5f;
 
-        // How far below the Knight to look for water while he's falling, so
-        // the trip ends just before he touches it.
+        // How far below the Knight to look for water while they're falling, so
+        // the trip ends just before they touch it.
         private const float WaterLookahead = 0.6f;
 
         // Frames the Knight must overlap something damaging, with the game not
@@ -113,8 +113,8 @@ namespace Stumble
             // Knight keeps sliding forward through the fall.
             t.SlideStartVx = t.Body.velocity.x;
 
-            // Note which areas the Knight is already in, so the ones he slides
-            // or falls into during the trip can be re-entered when he stands up.
+            // Note which areas the Knight is already in, so the ones they slide
+            // or fall into during the trip can be re-entered when they stand up.
             foreach (Collider2D col in OverlappingTriggers(t)) t.TriggersAtStart.Add(col);
 
             t.TakingControl = true;
@@ -168,11 +168,11 @@ namespace Stumble
 
             // Lie there until the player tries to move again. Any slide left
             // over from the fall finishes here, and if the Knight went over a
-            // ledge he keeps falling in this pose until he lands.
+            // ledge they keep falling in this pose until they land.
             t.Anim.Play(t.LyingClip);
 
             // The body hits the floor, if it hasn't already. If the Knight is
-            // in mid-air here (went over a ledge), the impact is his landing
+            // in mid-air here (went over a ledge), the impact is their landing
             // instead, handled in TrackLanding, and one impact never thuds twice.
             if (!t.Impacted && IsGrounded(t)) Impact(t);
 
@@ -220,7 +220,7 @@ namespace Stumble
                 if (_trip != t) yield break;
             }
 
-            // A cutscene that started while he was getting up keeps the Knight
+            // A cutscene that started while they were getting up keeps the Knight
             // until it's done; control comes back when it ends.
             while (t.ExternalHold)
             {
@@ -283,7 +283,7 @@ namespace Stumble
 
         /// <summary>
         /// Last-resort safety: if the Knight is off the ground but not falling
-        /// for a while, something is holding him in mid-air. Hand control
+        /// for a while, something is holding them in mid-air. Hand control
         /// back so the game's own physics takes over. Returns true if the trip
         /// ended.
         /// </summary>
@@ -314,7 +314,7 @@ namespace Stumble
         {
             if (t.Grounded) return false;
 
-            // Look a little below the Knight, further the faster he falls.
+            // Look a little below the Knight, further the faster they fall.
             Bounds b = t.Collider.bounds;
             float reach = WaterLookahead + Mathf.Max(0f, -t.Body.velocity.y) * Time.deltaTime * 2f;
             Vector2 center = new Vector2(b.center.x, b.center.y - reach / 2f);
@@ -324,8 +324,8 @@ namespace Stumble
             {
                 if (col == null || !col.isTrigger || !IsWater(col)) continue;
 
-                // A platform between the Knight and the surface catches him
-                // first, so he never reaches the water.
+                // A platform between the Knight and the surface catches them
+                // first, so they never reach the water.
                 if (GroundAboveWater(b, reach, col.bounds.max.y)) continue;
 
                 Log($"Trip ended just before entering water ({col.gameObject.name}).");
@@ -365,7 +365,7 @@ namespace Stumble
 
         /// <summary>
         /// Safety net for damage the game misses while the Knight is down: if
-        /// he overlaps something that should hurt him for a couple of frames
+        /// they overlap something that should hurt them for a couple of frames
         /// and the game hasn't reacted, apply that damage the way the game
         /// would. Anything the game already handles ends the trip first, so
         /// damage is never applied twice. Returns true if the trip ended.
@@ -466,8 +466,8 @@ namespace Stumble
 
         /// <summary>
         /// True if there's ground just ahead of the Knight's middle. Lets the
-        /// Knight slide until he's partly over a ledge (still supported), then
-        /// stops him there.
+        /// Knight slide until they're partly over a ledge (still supported), then
+        /// stops them there.
         /// </summary>
         private bool GroundAhead(ActiveTrip t, float direction)
         {
@@ -491,7 +491,7 @@ namespace Stumble
 
         /// <summary>
         /// Trigger areas the Knight currently overlaps that can actually
-        /// detect him (same rules the physics engine uses), not counting the
+        /// detect them (same rules the physics engine uses), not counting the
         /// Knight's own triggers.
         /// </summary>
         private static List<Collider2D> OverlappingTriggers(ActiveTrip t)
@@ -510,9 +510,9 @@ namespace Stumble
         }
 
         /// <summary>
-        /// Areas the game may have ignored the Knight entering while he was
-        /// tripped (hidden alcoves that light up, and the like) get told he
-        /// left and came back in, now that he has normal control. Anything
+        /// Areas the game may have ignored the Knight entering while they were
+        /// tripped (hidden alcoves that light up, and the like) get told they
+        /// left and came back in, now that they have normal control. Anything
         /// that handled the first entry fine ends up where it was: the "left"
         /// undoes it and the "entered" redoes it. Room exits and things that
         /// deal damage are left alone.

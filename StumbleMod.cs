@@ -9,9 +9,9 @@ using UnityEngine;
 namespace Stumble
 {
     /// <summary>
-    /// Every frame the Knight is running on the ground there is a 1-in-N chance
-    /// he trips: falls over, slides, lies flat until the player presses left or
-    /// right, then gets back up.
+    /// Every so often while the Knight is running on the ground, they trip:
+    /// they fall over, slide, and lie flat until the player presses left or
+    /// right, then get back up. How often is set by Knight Clumsiness.
     ///
     /// The mod is split across files by topic:
     ///   StumbleMod.cs         start-up, game hooks, starting and ending a trip
@@ -31,7 +31,7 @@ namespace Stumble
 
         public StumbleMod() : base("Stumble") { }
 
-        public override string GetVersion() => "1.16.1";
+        public override string GetVersion() => "0.1.0.0";
 
         // ---- Lifecycle -----------------------------------------------------
 
@@ -90,7 +90,7 @@ namespace Stumble
             HeroController hc = HeroController.instance;
             if (hc == null) return;
 
-            // A trip whose Knight was destroyed (quit to menu, etc.) died with him.
+            // A trip whose Knight was destroyed (quit to menu, etc.) died with them.
             if (_trip != null && _trip.Hero == null)
             {
                 _trip = null;
@@ -140,11 +140,11 @@ namespace Stumble
 
         /// <summary>
         /// Walking with the quick map out. The map takes over how the Knight
-        /// moves, so he doesn't count as running, but he's on the ground,
-        /// moving, with his nose in a map. Recognised by the map-walking
-        /// animation playing (any animation with "map" in its name) while he
-        /// moves along the ground. A trip switches the map button off, so he
-        /// drops the map.
+        /// moves, so they don't count as running, but they're on the ground,
+        /// moving, with their nose in a map. Recognised by the map-walking
+        /// animation playing (any animation with "map" in its name) while they
+        /// move along the ground. A trip switches the map button off, so they
+        /// drop the map.
         /// </summary>
         private static bool IsMapWalking(HeroController hc)
         {
@@ -230,11 +230,11 @@ namespace Stumble
             }
             else
             {
-                // Put the Knight back the way he'd be if he had never tripped,
+                // Put the Knight back the way they'd be if they had never tripped,
                 // then step aside. The game won't return the control the trip
                 // took (it doesn't know about the trip), and a Knight left that
                 // way can't attack, falls with no speed limit and can't trip.
-                // RegainControl would start him moving mid-sequence, so only
+                // RegainControl would start them moving mid-sequence, so only
                 // the trip's hold is dropped.
                 hc.controlReqlinquished = false;
             }
@@ -244,7 +244,7 @@ namespace Stumble
         /// Runs the moment a hit lands (after the game's invincibility checks,
         /// before damage and knockback are applied). If the Knight is tripped,
         /// control goes back right now, so the game's knockback plays out
-        /// exactly as it would if he were standing. Hazards (spikes, acid,
+        /// exactly as it would if they were standing. Hazards (spikes, acid,
         /// pits) are left to the hazard respawn, which takes control itself.
         /// </summary>
         private int OnAfterTakeDamage(int hazardType, int damageAmount)
@@ -273,8 +273,8 @@ namespace Stumble
         // Cutscenes (boss intros, auto-starting dialogue) take control of the
         // Knight when they start and hand it back when they end, with no idea
         // a trip is going on. While tripped, the mod keeps hold of the Knight
-        // through both: he can't stand up during the cutscene, and when it
-        // ends he's still down, with MinLieTime counted from that moment.
+        // through both: the Knight can't stand up during the cutscene, and when it
+        // ends they're still down, with MinLieTime counted from that moment.
         // EndTrip clears _trip before its own calls, and the trip's own
         // RelinquishControl sets TakingControl, so those pass straight through.
 
@@ -289,7 +289,7 @@ namespace Stumble
             if (_trip != null)
             {
                 // Something else is done with the Knight, but the trip still
-                // has him: keep control taken.
+                // has them: keep control taken.
                 _trip.ExternalHold = false;
                 _trip.RestartLieClock = true;
                 return;

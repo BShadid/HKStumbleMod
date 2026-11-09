@@ -51,7 +51,7 @@ namespace Stumble
         public float SlideTime = 0.75f;
 
         /// <summary>
-        /// True: a slide carries the Knight off ledges and he falls in the
+        /// True: a slide carries the Knight off ledges and they fall in the
         /// lying pose. False: the slide stops at the edge.
         /// </summary>
         public bool TumbleOffEdges = true;

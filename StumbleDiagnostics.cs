@@ -35,7 +35,7 @@ namespace Stumble
         /// <summary>
         /// With DetailedLogging on: the first time per session the Knight moves
         /// along the ground with the map button held but can't trip, logs what
-        /// the game shows about him, so map-walking can be recognised properly.
+        /// the game shows about them, so map-walking can be recognised properly.
         /// </summary>
         private void LogMapWalkMissOnce(HeroController hc)
         {
@@ -146,7 +146,7 @@ namespace Stumble
         /// <summary>
         /// Logs what's at the impact point, once per object per session: the
         /// ground the Knight hit, then every other object with a collider
-        /// around his feet (decorations, grass, effect zones). Platform effects
+        /// around their feet (decorations, grass, effect zones). Platform effects
         /// usually live on one of those rather than on the ground itself.
         /// </summary>
         private void LogGroundOnce(ActiveTrip t)
@@ -158,7 +158,7 @@ namespace Stumble
                 Log($"Trip impact on {Describe(ground)}");
 
             // Everything else around the feet: a box the Knight's width plus a
-            // margin, from his middle to a little below the floor.
+            // margin, from their middle to a little below the floor.
             Vector2 center = new Vector2(b.center.x, (b.center.y + b.min.y - 0.5f) / 2f);
             Vector2 size = new Vector2(b.size.x + 0.5f, b.extents.y + 0.5f);
             foreach (Collider2D col in Physics2D.OverlapBoxAll(center, size, 0f))
