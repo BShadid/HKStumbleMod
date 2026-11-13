@@ -17,6 +17,21 @@ You need Hollow Knight 1.5 with the Modding API installed (through Lumafly,
 The build copies `Stumble.dll` into `hollow_knight_Data/Managed/Mods/Stumble/`
 automatically. To install by hand, copy `bin/Release/net472/Stumble.dll` there.
 
+## Releasing
+
+Every release from v0.2, the Preloaded Tinkables Update, onward needs:
+
+1. **The Path of Pain, cleared on the hardest settings:** Knight Clumsiness and
+   Wall Clumsiness both on Very High, with every other setting at its default,
+   on the build being released. No exceptions.
+2. The version updated in both `StumbleMod.cs` (`GetVersion`) and
+   `Stumble.csproj`, as four numbers (`0.2.0.0`).
+3. The high-risk checks in the test plan passed on that build.
+4. A GitHub release tagged `vX.Y` with `Stumble.dll` zipped as `Stumble.zip`.
+5. A pull request to [modlinks](https://github.com/hk-modding/modlinks)
+   updating Stumble's entry: the version, the release link, and the zip's
+   SHA256 (without the `sha256:` prefix).
+
 ## Source files
 
 | File | What's in it |
