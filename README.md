@@ -16,10 +16,18 @@ To install by hand, download `Stumble.zip` from the
 
 ## What happens
 
-- They can trip whenever they're walking or running along the ground.
+- They can trip whenever they're walking or running along the ground, and
+  when they finish a dash on the ground.
 - They slide forward with their momentum, fall, and stay down until you press
   left or right once again.
 - Getting hit while they're down knocks them back as usual.
+- With the Mantis Claw, they can lose their grip as they catch a wall, or
+  while clinging to one. A spark marks the spot. They drop off and can't grab
+  a wall or wall-jump again until they land or a moment passes. Even a failed
+  grab gives back their double jump and dash, as touching a wall always does.
+  The slip startles them, so a jump pressed right as they lose their grip
+  does nothing, but a quick double jump or dash a beat later might still save
+  them.
 
 ## Options
 
@@ -27,21 +35,14 @@ In the game, go to **Options > Mods > Stumble**.
 
 | Menu Option | What it does |
 |---|---|
+| Stumble | Turns the mod on or off. |
 | Knight Clumsiness | How often they trip: Low, Medium (default), High or Very High. |
-| Time on the ground | The shortest time they stay down before you can get them up. |
-| Fall animation | Show them falling over, rather than dropping straight to the floor. |
-| Fall speed | How quickly they fall. |
-| Skip pauses in fall | Smooths the fall by skipping the moment they'd pause on one knee. |
-| Forward slide | How far they slide after tripping. |
-| At ledges | Whether a slide stops at the edge or carries them over it. |
-| Landing sound | A soft landing sound when they tumble off a short drop. |
-| Trip thud | A thud when they hit the floor. |
-| Impact dust | A puff of dust where they land. |
-| Detailed logging | Extra detail in the game's log, for reporting problems. |
+| Wall Clumsiness | How often they lose their grip on walls: Off, Low, Medium (default), High or Very High. |
+| Detailed Logging | Extra detail in the game's log, for reporting problems. |
 
 ## Good to know
 
-- They can't trip while dashing, jumping, healing or using Shape of Unn. If
+- They can't trip mid-dash, while jumping, healing or using Shape of Unn. If
   you're determined, you can hop your way around Hallownest.
 - The map and inventory can't be opened while they're down. The pause menu still
   works.
@@ -55,7 +56,7 @@ In the game, go to **Options > Mods > Stumble**.
 
 ## Reporting problems
 
-1. Turn on **Detailed logging** in the Stumble options.
+1. Turn on **Detailed Logging** in the Stumble options.
 2. Make the problem happen again.
 3. [Open an issue](../../issues) describing what happened, and attach
    `ModLog.txt` and a list of your other installed mods.

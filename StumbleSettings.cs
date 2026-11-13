@@ -4,8 +4,9 @@ namespace Stumble
 {
     /// <summary>
     /// Settings saved by the Modding API to Stumble.GlobalSettings.json in the
-    /// game's save folder. Edit that file for values the in-game menu doesn't
-    /// offer (animation names, fall frames). Delete it to restore defaults.
+    /// game's save folder. The in-game menu only offers Knight Clumsiness, Wall
+    /// Clumsiness and DetailedLogging; everything else is changed in that file.
+    /// Delete it to restore defaults.
     /// </summary>
     public class StumbleSettings
     {
@@ -13,10 +14,61 @@ namespace Stumble
         // ground between trips for each. Retune the numbers here.
         public static readonly string[] ClumsinessLevels = { "Low", "Medium", "High", "Very High" };
         private static readonly float[] ClumsinessSeconds = { 30f, 15f, 8f, 4f };
+
+        // The chance of stumbling at the end of each dash along the ground,
+        // per clumsiness level. Retune the numbers here too.
+        private static readonly float[] ClumsinessDashChance = { 0.05f, 0.10f, 0.20f, 0.35f };
         private const int DefaultClumsiness = 1; // Medium
 
         /// <summary>How clumsy the Knight is: Low, Medium, High or Very High.</summary>
         public string KnightClumsiness = ClumsinessLevels[DefaultClumsiness];
+
+        // The wall clumsiness levels and the average seconds of clinging to a
+        // wall between slips for each. Clinging comes in short bursts, so these
+        // are much shorter than the trip timings. Retune the numbers here.
+        public static readonly string[] WallClumsinessLevels = { "Off", "Low", "Medium", "High", "Very High" };
+        private static readonly float[] WallClumsinessSeconds = { 0f, 20f, 10f, 5f, 2f };
+
+        // The chance of slipping each time the Knight catches a wall, per wall
+        // clumsiness level. This is what catches fast wall-jump climbs, where
+        // each wall is touched too briefly for the timing above to matter.
+        private static readonly float[] WallClumsinessGrabChance = { 0f, 0.03f, 0.06f, 0.12f, 0.25f };
+        private const int DefaultWallClumsiness = 2; // Medium
+
+        /// <summary>How often the Knight loses their grip on walls: Off, Low, Medium, High or Very High.</summary>
+        public string WallClumsiness = WallClumsinessLevels[DefaultWallClumsiness];
+
+        /// <summary>
+        /// Seconds after a wall slip during which the Knight can't grab a wall
+        /// or wall-jump. Landing ends it sooner.
+        /// </summary>
+        public float SlipNoGrabTime = 0.5f;
+
+        /// <summary>
+        /// Seconds at the start of that window (the startle) during which
+        /// double jumps don't work either, so a jump pressed out of habit as
+        /// the Knight slips doesn't save them. Never longer than
+        /// SlipNoGrabTime. 0 turns it off.
+        /// </summary>
+        public float SlipNoDoubleJumpTime = 0.25f;
+
+        /// <summary>
+        /// Sound played when the Knight slips off a wall: one of the Knight's
+        /// own sound names, or any loaded sound clip's name, as listed in
+        /// Stumble.Sounds.txt (written with DetailedLogging on). Blank plays
+        /// nothing. The default, sword_hit_reject, is the "tink" of the nail
+        /// bouncing off something it can't cut.
+        /// </summary>
+        public string SlipSound = "sword_hit_reject";
+
+        /// <summary>
+        /// Effect shown where the Knight loses their grip: "Tink" (the spark
+        /// the nail makes off something it can't cut; the wall puff stands in
+        /// until the game has loaded one), the name of one of the Knight's
+        /// effects (such as "Wall Puff", listed in ModLog.txt with
+        /// DetailedLogging on), or blank for none.
+        /// </summary>
+        public string SlipEffect = "Tink";
 
         /// <summary>
         /// Minimum seconds on the ground before a left/right press stands the
@@ -92,6 +144,11 @@ namespace Stumble
         public void Validate()
         {
             KnightClumsiness = ClumsinessLevels[ClumsinessIndex()];
+            WallClumsiness = WallClumsinessLevels[WallClumsinessIndex()];
+            SlipNoGrabTime = Mathf.Clamp(SlipNoGrabTime, 0.05f, 5f);
+            SlipNoDoubleJumpTime = Mathf.Clamp(SlipNoDoubleJumpTime, 0f, SlipNoGrabTime);
+            if (SlipSound == null) SlipSound = "";
+            if (SlipEffect == null) SlipEffect = "";
             MinLieTime = Mathf.Clamp(MinLieTime, 0f, 5f);
             FallSpeed = Mathf.Clamp(FallSpeed, 0.25f, 10f);
             SlideTime = Mathf.Clamp(SlideTime, 0f, 2f);
@@ -108,15 +165,32 @@ namespace Stumble
         /// Position of KnightClumsiness in ClumsinessLevels. Ignores case and
         /// spacing; anything unrecognised counts as Medium.
         /// </summary>
-        public int ClumsinessIndex()
-        {
-            string wanted = (KnightClumsiness ?? "").Replace(" ", "").ToLowerInvariant();
-            for (int i = 0; i < ClumsinessLevels.Length; i++)
-                if (ClumsinessLevels[i].Replace(" ", "").ToLowerInvariant() == wanted) return i;
-            return DefaultClumsiness;
-        }
+        public int ClumsinessIndex() => LevelIndex(KnightClumsiness, ClumsinessLevels, DefaultClumsiness);
 
         /// <summary>Average seconds of running on the ground between trips at this clumsiness.</summary>
         public float AverageTripSeconds() => ClumsinessSeconds[ClumsinessIndex()];
+
+        /// <summary>Chance of stumbling when a dash along the ground ends, at this clumsiness.</summary>
+        public float DashTripChance() => ClumsinessDashChance[ClumsinessIndex()];
+
+        /// <summary>Position of WallClumsiness in WallClumsinessLevels; anything unrecognised counts as Medium.</summary>
+        public int WallClumsinessIndex() => LevelIndex(WallClumsiness, WallClumsinessLevels, DefaultWallClumsiness);
+
+        /// <summary>
+        /// Average seconds of clinging to a wall between slips at this wall
+        /// clumsiness, or 0 when slips are off.
+        /// </summary>
+        public float AverageSlipSeconds() => WallClumsinessSeconds[WallClumsinessIndex()];
+
+        /// <summary>Chance of slipping each time the Knight catches a wall, at this wall clumsiness.</summary>
+        public float GrabSlipChance() => WallClumsinessGrabChance[WallClumsinessIndex()];
+
+        private static int LevelIndex(string value, string[] levels, int fallback)
+        {
+            string wanted = (value ?? "").Replace(" ", "").ToLowerInvariant();
+            for (int i = 0; i < levels.Length; i++)
+                if (levels[i].Replace(" ", "").ToLowerInvariant() == wanted) return i;
+            return fallback;
+        }
     }
 }

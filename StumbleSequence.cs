@@ -20,6 +20,10 @@ namespace Stumble
         // Longest the fall waits for the game to put the map away.
         private const float MaxMapAwayWait = 1f;
 
+        // Fastest a trip's slide can start, a little above running speed
+        // (with Sprintmaster), so dash speed doesn't carry into the slide.
+        private const float MaxSlideStartSpeed = 12f;
+
         // How far ahead of the Knight's middle to look for ground while sliding.
         private const float EdgeLookahead = 0.15f;
 
@@ -110,8 +114,9 @@ namespace Stumble
             HeroController hc = t.Hero;
 
             // Remember the running speed before taking control away, so the
-            // Knight keeps sliding forward through the fall.
-            t.SlideStartVx = t.Body.velocity.x;
+            // Knight keeps sliding forward through the fall. Capped, so a trip
+            // straight out of a dash doesn't skid the length of the room.
+            t.SlideStartVx = Mathf.Clamp(t.Body.velocity.x, -MaxSlideStartSpeed, MaxSlideStartSpeed);
 
             // Note which areas the Knight is already in, so the ones they slide
             // or fall into during the trip can be re-entered when they stand up.

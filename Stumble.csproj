@@ -5,7 +5,7 @@
     <AssemblyName>Stumble</AssemblyName>
     <RootNamespace>Stumble</RootNamespace>
     <LangVersion>latest</LangVersion>
-    <Version>0.1.0.0</Version>
+    <Version>0.2.0.0</Version>
     <!-- Point this at your Hollow Knight install folder. -->
     <GameDir>C:\Program Files (x86)\Steam\steamapps\common\Hollow Knight</GameDir>
     <ManagedDir>$(GameDir)\hollow_knight_Data\Managed</ManagedDir>
@@ -33,6 +33,10 @@
     </Reference>
     <Reference Include="UnityEngine.Physics2DModule">
       <HintPath>$(ManagedDir)\UnityEngine.Physics2DModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>$(ManagedDir)\UnityEngine.AudioModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>

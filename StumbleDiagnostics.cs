@@ -200,5 +200,62 @@ namespace Stumble
             }
             return string.Join(", ", parts.ToArray());
         }
+
+        // ---- The sound list (for auditioning a slip sound) -----------------
+
+        // Every sound clip seen loaded this session, with the area where it
+        // was first seen.
+        private readonly SortedDictionary<string, string> _soundCatalogue =
+            new SortedDictionary<string, string>(System.StringComparer.OrdinalIgnoreCase);
+        private bool _soundCatalogueWritten;
+
+        private void OnActiveSceneChanged(UnityEngine.SceneManagement.Scene from, UnityEngine.SceneManagement.Scene to)
+        {
+            if (_settings.DetailedLogging) UpdateSoundCatalogue();
+            if (WantsTinkSpark()) FindTinkSpark();
+        }
+
+        /// <summary>
+        /// With DetailedLogging on: writes Stumble.Sounds.txt next to
+        /// ModLog.txt, listing the Knight's own sounds and every sound clip
+        /// seen loaded so far. Any name in it works for SlipSound. Rewritten
+        /// only when new sounds turn up.
+        /// </summary>
+        private void UpdateSoundCatalogue()
+        {
+            string area = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            int before = _soundCatalogue.Count;
+            foreach (AudioClip clip in Resources.FindObjectsOfTypeAll<AudioClip>())
+                if (clip != null && !string.IsNullOrEmpty(clip.name) && !_soundCatalogue.ContainsKey(clip.name))
+                    _soundCatalogue[clip.name] = area;
+
+            if (_soundCatalogueWritten && _soundCatalogue.Count == before) return;
+
+            var lines = new List<string>
+            {
+                "Sounds for Stumble's SlipSound setting. Put any name below into SlipSound",
+                "in Stumble.GlobalSettings.json (with the game closed), then slip off a wall.",
+                "",
+                "The Knight's own sounds. These always work:"
+            };
+            foreach (string n in System.Enum.GetNames(typeof(HeroSounds))) lines.Add("  " + n);
+            lines.Add("");
+            lines.Add("Other sounds, with the area where each was first seen. These only play");
+            lines.Add("while the game has them loaded, so one may be silent in other areas:");
+            foreach (KeyValuePair<string, string> entry in _soundCatalogue)
+                lines.Add($"  {entry.Key}   ({entry.Value})");
+
+            string path = System.IO.Path.Combine(Application.persistentDataPath, "Stumble.Sounds.txt");
+            try
+            {
+                System.IO.File.WriteAllLines(path, lines.ToArray());
+                _soundCatalogueWritten = true;
+                Log($"Sound list updated: {_soundCatalogue.Count} sounds in Stumble.Sounds.txt.");
+            }
+            catch (System.Exception e)
+            {
+                LogWarn("Couldn't write Stumble.Sounds.txt: " + e.Message);
+            }
+        }
     }
 }

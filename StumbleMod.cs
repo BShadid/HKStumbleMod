@@ -18,6 +18,7 @@ namespace Stumble
     ///   StumbleSequence.cs    one trip from start to finish, and its safety checks
     ///   StumbleEffects.cs     the fall animation, sounds and dust
     ///   StumbleDiagnostics.cs log output for troubleshooting
+    ///   StumbleSlip.cs        wall slips and the effect where the grip goes
     ///   StumbleMenu.cs        the in-game options menu
     ///   StumbleSettings.cs    the settings and their defaults
     /// </summary>
@@ -31,9 +32,28 @@ namespace Stumble
 
         public StumbleMod() : base("Stumble") { }
 
-        public override string GetVersion() => "0.1.0.0";
+        public override string GetVersion() => "0.2.0.0";
 
         // ---- Lifecycle -----------------------------------------------------
+
+        /// <summary>
+        /// Objects for the Modding API to load from other areas at start-up,
+        /// behind the loading screen: the tinkable spikes whose spark plays on
+        /// a wall slip (see StumbleSlip.cs).
+        /// </summary>
+        public override List<(string, string)> GetPreloadNames()
+        {
+            var preloads = new List<(string, string)>();
+            string scene = TinkSourceScene();
+            if (scene != null) preloads.Add((scene, TinkSourcePath));
+            return preloads;
+        }
+
+        public override void Initialize(Dictionary<string, Dictionary<string, GameObject>> preloadedObjects)
+        {
+            TakeTinkSparkFromPreload(preloadedObjects);
+            Initialize();
+        }
 
         public override void Initialize()
         {
@@ -45,6 +65,9 @@ namespace Stumble
             ModHooks.AfterTakeDamageHook += OnAfterTakeDamage;
             ModHooks.BeforeSceneLoadHook -= OnBeforeSceneLoad;
             ModHooks.BeforeSceneLoadHook += OnBeforeSceneLoad;
+            UnityEngine.SceneManagement.SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+            UnityEngine.SceneManagement.SceneManager.activeSceneChanged += OnActiveSceneChanged;
+            InstallGrabHooks();
             On.HeroController.RelinquishControl -= OnRelinquishControl;
             On.HeroController.RelinquishControl += OnRelinquishControl;
             On.HeroController.RegainControl -= OnRegainControl;
@@ -62,14 +85,18 @@ namespace Stumble
             ModHooks.HeroUpdateHook -= OnHeroUpdate;
             ModHooks.AfterTakeDamageHook -= OnAfterTakeDamage;
             ModHooks.BeforeSceneLoadHook -= OnBeforeSceneLoad;
+            UnityEngine.SceneManagement.SceneManager.activeSceneChanged -= OnActiveSceneChanged;
             On.HeroController.RelinquishControl -= OnRelinquishControl;
             On.HeroController.RegainControl -= OnRegainControl;
             On.HeroController.StartAnimationControl -= OnStartAnimationControl;
             On.HeroController.CanQuickMap -= OnCanQuickMap;
             On.HeroController.CanOpenInventory -= OnCanOpenInventory;
 
-            // Switched off mid-trip: get the Knight back up.
+            // Switched off mid-trip: hand the Knight back. Any no-grab window
+            // after a wall slip ends too.
             EndTrip(_trip, TripEnd.StandUp);
+            EndGrabLockout();
+            RemoveGrabHooks();
             SetMenuButtonsBlocked(false);
         }
 
@@ -83,12 +110,15 @@ namespace Stumble
 
         public StumbleSettings OnSaveGlobal() => _settings;
 
-        // ---- Starting a trip -----------------------------------------------
+        // ---- Starting a trip or a slip --------------------------------------
 
         private void OnHeroUpdate()
         {
             HeroController hc = HeroController.instance;
             if (hc == null) return;
+
+            // Tracked every frame, so a dash's start and end are never missed.
+            bool groundDashJustEnded = TrackDash(hc);
 
             // A trip whose Knight was destroyed (quit to menu, etc.) died with them.
             if (_trip != null && _trip.Hero == null)
@@ -98,6 +128,30 @@ namespace Stumble
             }
             if (_trip != null) return;
 
+            // The no-grab window after a wall slip: ends on landing or when time is up.
+            UpdateGrabLockout(hc);
+
+            // Catching a wall: one roll for a slip, however briefly they touch it.
+            if (WallContactBegan(hc) && Random.value < _settings.GrabSlipChance())
+            {
+                StartSlip(hc);
+                return;
+            }
+
+            // Clinging to a wall: roll for a slip instead of a trip.
+            if (IsClingingToWall(hc))
+            {
+                if (SlipRollSucceeds()) StartSlip(hc);
+                return;
+            }
+
+            // A dash along the ground just finished: one roll for a stumble.
+            if (groundDashJustEnded && CanTripAfterDash(hc))
+            {
+                if (Random.value < _settings.DashTripChance()) StartTrip(hc);
+                return;
+            }
+
             if (!IsRunningOnGround(hc) && !IsMapWalking(hc))
             {
                 if (_settings.DetailedLogging) LogMapWalkMissOnce(hc);
@@ -106,6 +160,47 @@ namespace Stumble
             if (!TripRollSucceeds()) return;
 
             StartTrip(hc);
+        }
+
+        // ---- Stumbling out of a dash ---------------------------------------
+
+        private bool _wasDashing;
+        private bool _dashStartedOnGround;
+
+        /// <summary>
+        /// Watches the dash (Mothwing or Shade Cloak) start and end. Returns
+        /// true on the frame a dash that started on the ground finishes with
+        /// the Knight still on the ground.
+        /// </summary>
+        private bool TrackDash(HeroController hc)
+        {
+            bool dashing = hc.cState.dashing;
+            bool groundDashEnded = false;
+
+            if (dashing && !_wasDashing) _dashStartedOnGround = hc.cState.onGround;
+            else if (!dashing && _wasDashing) groundDashEnded = _dashStartedOnGround && hc.cState.onGround;
+
+            _wasDashing = dashing;
+            return groundDashEnded;
+        }
+
+        /// <summary>
+        /// Whether a trip can start right after a dash: on the ground, with the
+        /// player in control, and nothing else going on.
+        /// </summary>
+        private static bool CanTripAfterDash(HeroController hc)
+        {
+            HeroControllerStates s = hc.cState;
+            return hc.acceptingInput
+                && !hc.controlReqlinquished
+                && s.onGround
+                && !s.focusing
+                && !s.recoiling
+                && !s.transitioning
+                && !s.dead
+                && !s.hazardDeath
+                && !s.hazardRespawning
+                && !s.isPaused;
         }
 
         /// <summary>
@@ -244,8 +339,9 @@ namespace Stumble
         /// Runs the moment a hit lands (after the game's invincibility checks,
         /// before damage and knockback are applied). If the Knight is tripped,
         /// control goes back right now, so the game's knockback plays out
-        /// exactly as it would if they were standing. Hazards (spikes, acid,
-        /// pits) are left to the hazard respawn, which takes control itself.
+        /// exactly as it would otherwise. Hazards
+        /// (spikes, acid, pits) are left to the hazard respawn, which takes
+        /// control itself.
         /// </summary>
         private int OnAfterTakeDamage(int hazardType, int damageAmount)
         {
@@ -265,6 +361,7 @@ namespace Stumble
                 EndTrip(_trip, TripEnd.GameTookOver);
                 Log($"Trip ended by a scene load ({sceneName}).");
             }
+            EndGrabLockout();
             return sceneName;
         }
 

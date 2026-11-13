@@ -231,5 +231,102 @@ namespace Stumble
                 LogWarn("Couldn't spawn the landing dust: " + e.Message);
             }
         }
+
+        // ---- Playing a sound by name (for auditioning a slip sound) -------
+
+        private readonly HashSet<string> _warnedSounds = new HashSet<string>();
+
+        // Clips found by name, kept so they still play in areas that wouldn't
+        // have loaded them. Holding the reference keeps the clip in memory.
+        private readonly Dictionary<string, AudioClip> _foundClips =
+            new Dictionary<string, AudioClip>(System.StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Plays a sound by name: one of the Knight's own sounds (HeroSounds),
+        /// or any sound clip the game has loaded right now. Blank plays nothing.
+        /// An unknown name is warned about once.
+        /// </summary>
+        private void PlayNamedSound(HeroController hc, string name)
+        {
+            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(name.Trim())) return;
+            string wanted = name.Trim();
+
+            HeroAudioController audio = hc.GetComponent<HeroAudioController>();
+            if (audio != null && TryParseHeroSound(wanted, out HeroSounds heroSound))
+            {
+                audio.PlaySound(heroSound);
+                hc.StartCoroutine(StopHeroSoundLater(audio, heroSound, 1f));
+                return;
+            }
+
+            AudioClip clip = FindLoadedClip(wanted);
+            AudioSource source = HeroSoundSource(hc);
+            if (clip != null && source != null)
+            {
+                source.PlayOneShot(clip);
+                return;
+            }
+
+            if (_warnedSounds.Add(wanted))
+                LogWarn($"Sound \"{wanted}\" isn't one of the Knight's sounds or a sound loaded right now. See Stumble.Sounds.txt.");
+        }
+
+        private static bool TryParseHeroSound(string name, out HeroSounds sound)
+        {
+            sound = default(HeroSounds);
+            foreach (string n in System.Enum.GetNames(typeof(HeroSounds)))
+            {
+                if (!string.Equals(n, name, System.StringComparison.OrdinalIgnoreCase)) continue;
+                sound = (HeroSounds)System.Enum.Parse(typeof(HeroSounds), n);
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Some of the Knight's sounds loop (footsteps, wall sliding). Stop the
+        /// auditioned one after a moment so it doesn't run on. Looked up by
+        /// name, so nothing breaks if this game version lacks it.
+        /// </summary>
+        private static IEnumerator StopHeroSoundLater(HeroAudioController audio, HeroSounds sound, float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            if (audio == null) yield break;
+            MethodInfo stop = typeof(HeroAudioController).GetMethod("StopSound", new[] { typeof(HeroSounds) });
+            if (stop != null) stop.Invoke(audio, new object[] { sound });
+        }
+
+        /// <summary>
+        /// A sound clip by name: the one kept from an earlier find, or else
+        /// one the game has loaded right now, which is then kept.
+        /// </summary>
+        private AudioClip FindLoadedClip(string name)
+        {
+            if (_foundClips.TryGetValue(name, out AudioClip kept) && kept != null) return kept;
+
+            foreach (AudioClip clip in Resources.FindObjectsOfTypeAll<AudioClip>())
+            {
+                if (clip == null || !string.Equals(clip.name, name, System.StringComparison.OrdinalIgnoreCase)) continue;
+                _foundClips[name] = clip;
+                return clip;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// One of the Knight's audio sources, preferring one routed through the
+        /// game's mixer so the game's volume settings apply.
+        /// </summary>
+        private static AudioSource HeroSoundSource(HeroController hc)
+        {
+            AudioSource fallback = null;
+            foreach (AudioSource s in hc.GetComponentsInChildren<AudioSource>(true))
+            {
+                if (s == null) continue;
+                if (s.outputAudioMixerGroup != null) return s;
+                if (fallback == null) fallback = s;
+            }
+            return fallback;
+        }
     }
 }
