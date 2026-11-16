@@ -38,7 +38,29 @@ In the game, go to **Options > Mods > Stumble**.
 | Stumble | Turns the mod on or off. |
 | Knight Clumsiness | How often they trip: Low, Medium (default), High or Very High. |
 | Wall Clumsiness | How often they lose their grip on walls: Off, Low, Medium (default), High or Very High. |
+| Multiplayer Help-Ups | With HKMP: help each other up (see below). Off by default; restart the game after changing it. |
 | Detailed Logging | Extra detail in the game's log, for reporting problems. |
+
+## Multiplayer
+
+With [HKMP](https://github.com/Extremelyd1/HKMP) installed, turn on
+**Multiplayer Help-Ups** and restart the game. Then, on a server where
+everyone has it on:
+
+- A Knight who trips stays down for 30 seconds before they can get up on
+  their own, whether or not anyone is nearby.
+- While they wait, pressing left or right makes them struggle to get up,
+  and everyone in the room sees it. They also struggle when you come close.
+- Walk over and hold Up: they're lifted to their knees as you hold, and
+  stand once you've held long enough. Let go early and they flop back down.
+  Everyone sees it, the fallen player included.
+- Getting hit still knocks them back to their feet.
+- Everyone sees each other fall over.
+
+HKMP only lets you join servers whose add-ons match yours, so everyone on the
+server, host included, needs Multiplayer Help-Ups on. With it on, you can't
+join servers without it: turn it off and restart to play elsewhere. Hosting
+from inside the game works; standalone HKMP servers aren't supported yet.
 
 ## Good to know
 

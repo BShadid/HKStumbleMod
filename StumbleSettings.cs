@@ -4,9 +4,9 @@ namespace Stumble
 {
     /// <summary>
     /// Settings saved by the Modding API to Stumble.GlobalSettings.json in the
-    /// game's save folder. The in-game menu only offers Knight Clumsiness, Wall
-    /// Clumsiness and DetailedLogging; everything else is changed in that file.
-    /// Delete it to restore defaults.
+    /// game's save folder. The in-game menu offers Knight Clumsiness, Wall
+    /// Clumsiness, Multiplayer Help-Ups and DetailedLogging; everything else is
+    /// changed in that file. Delete it to restore defaults.
     /// </summary>
     public class StumbleSettings
     {
@@ -69,6 +69,22 @@ namespace Stumble
         /// DetailedLogging on), or blank for none.
         /// </summary>
         public string SlipEffect = "Tink";
+
+        /// <summary>
+        /// Multiplayer (HKMP): on a server, fallen Knights stay down longer and
+        /// can be helped up by other players. Every player on the server needs
+        /// it on to connect. Takes effect when the game starts.
+        /// </summary>
+        public bool MultiplayerHelpUps = false;
+
+        /// <summary>
+        /// Multiplayer: seconds on the ground before a fallen Knight can get up
+        /// alone, while connected to a server, whether or not anyone is nearby.
+        /// </summary>
+        public float MultiplayerLieTime = 30f;
+
+        /// <summary>Multiplayer: seconds of holding Up next to a fallen Knight to help them up.</summary>
+        public float HelpUpTime = 1.5f;
 
         /// <summary>
         /// Minimum seconds on the ground before a left/right press stands the
@@ -150,6 +166,8 @@ namespace Stumble
             if (SlipSound == null) SlipSound = "";
             if (SlipEffect == null) SlipEffect = "";
             MinLieTime = Mathf.Clamp(MinLieTime, 0f, 5f);
+            MultiplayerLieTime = Mathf.Clamp(MultiplayerLieTime, 0f, 600f);
+            HelpUpTime = Mathf.Clamp(HelpUpTime, 0f, 10f);
             FallSpeed = Mathf.Clamp(FallSpeed, 0.25f, 10f);
             SlideTime = Mathf.Clamp(SlideTime, 0f, 2f);
             ThudFramesEarly = Mathf.Clamp(ThudFramesEarly, 0, 30);

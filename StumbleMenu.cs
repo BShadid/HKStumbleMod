@@ -4,7 +4,8 @@ using Modding;
 namespace Stumble
 {
     // The in-game menu: Options > Mods > Stumble. It shows the mod's on/off
-    // switch, Knight Clumsiness, Wall Clumsiness and Detailed Logging. Every other setting
+    // switch, Knight Clumsiness, Wall Clumsiness, Multiplayer Help-Ups and
+    // Detailed Logging. Every other setting
     // keeps its default and can be changed in the settings file (see
     // DEVELOPING.md). To add a menu option, add a field to StumbleSettings
     // and one entry below.
@@ -36,6 +37,10 @@ namespace Stumble
                 Saver = i => _settings.WallClumsiness = StumbleSettings.WallClumsinessLevels[i],
                 Loader = () => _settings.WallClumsinessIndex()
             });
+
+            entries.Add(MenuToggle("Multiplayer Help-Ups",
+                "For HKMP co-op. Every player needs it on. Restart to apply.",
+                () => _settings.MultiplayerHelpUps, v => _settings.MultiplayerHelpUps = v));
 
             entries.Add(MenuToggle("Detailed Logging", "Write extra detail to ModLog.txt, for reporting problems.",
                 () => _settings.DetailedLogging, v => _settings.DetailedLogging = v));

@@ -19,6 +19,8 @@ namespace Stumble
     ///   StumbleEffects.cs     the fall animation, sounds and dust
     ///   StumbleDiagnostics.cs log output for troubleshooting
     ///   StumbleSlip.cs        wall slips and the effect where the grip goes
+    ///   StumbleMultiplayer.cs helping each other up in multiplayer (HKMP)
+    ///   StumbleHkmp.cs        the HKMP add-on itself; only runs with HKMP installed
     ///   StumbleMenu.cs        the in-game options menu
     ///   StumbleSettings.cs    the settings and their defaults
     /// </summary>
@@ -32,7 +34,7 @@ namespace Stumble
 
         public StumbleMod() : base("Stumble") { }
 
-        public override string GetVersion() => "0.2.0.0";
+        public override string GetVersion() => "0.3.0.0";
 
         // ---- Lifecycle -----------------------------------------------------
 
@@ -52,6 +54,7 @@ namespace Stumble
         public override void Initialize(Dictionary<string, Dictionary<string, GameObject>> preloadedObjects)
         {
             TakeTinkSparkFromPreload(preloadedObjects);
+            SetUpMultiplayer();
             Initialize();
         }
 
@@ -125,7 +128,12 @@ namespace Stumble
             {
                 _trip = null;
                 SetMenuButtonsBlocked(false);
+                TellOthers(TripPhase.Up);
             }
+
+            // Multiplayer: status updates, other players' trips, and helping a fallen player up.
+            if (_coop != null) _coop.Tick(hc, CanHelpNow(hc));
+
             if (_trip != null) return;
 
             // The no-grab window after a wall slip: ends on landing or when time is up.
@@ -284,6 +292,7 @@ namespace Stumble
             _trip = trip;
             SetMenuButtonsBlocked(true);
             ResetMenuFsmTracking();
+            TellOthers(TripPhase.Falling);
             hc.StartCoroutine(TripRoutine(trip));
         }
 
@@ -310,6 +319,7 @@ namespace Stumble
             // Clear the trip first, so the control hooks let the calls below through.
             _trip = null;
             SetMenuButtonsBlocked(false);
+            TellOthers(TripPhase.Up);
 
             HeroController hc = trip.Hero;
             if (hc == null) return;
@@ -436,29 +446,31 @@ namespace Stumble
             object actions = InputHandler.Instance != null ? InputHandler.Instance.inputActions : null;
             if (actions == null) return;
 
-            var missing = new List<string>();
+            var absent = new List<string>();   // not in this game version: nothing to block
+            var stuck = new List<string>();    // there, but can't be switched off: a real problem
             foreach (string name in MenuButtonNames)
             {
                 FieldInfo field = actions.GetType().GetField(name);
                 object button = field != null ? field.GetValue(actions) : null;
                 if (button == null)
                 {
-                    missing.Add(name);
+                    absent.Add(name);
                     continue;
                 }
 
                 // Leave alone a button something else already switched off.
                 if (!IsButtonEnabled(button)) continue;
                 if (SetButtonEnabled(button, false)) _blockedButtons.Add(button);
-                else missing.Add(name + " (can't be switched off)");
+                else stuck.Add(name);
             }
 
-            if (missing.Count > 0 && !_warnedMenuButtons)
+            if ((absent.Count > 0 || stuck.Count > 0) && !_warnedMenuButtons)
             {
                 _warnedMenuButtons = true;
-                // Expected for names this game version doesn't have; a
-                // "can't be switched off" entry means blocking doesn't work.
-                LogWarn("Menu buttons not blocked during trips: " + string.Join(", ", missing.ToArray()));
+                if (absent.Count > 0)
+                    LogDetail("Menu buttons this game version doesn't have (nothing to block): " + string.Join(", ", absent.ToArray()));
+                if (stuck.Count > 0)
+                    LogWarn("Menu buttons that couldn't be switched off during trips: " + string.Join(", ", stuck.ToArray()));
             }
         }
 

@@ -5,7 +5,7 @@
     <AssemblyName>Stumble</AssemblyName>
     <RootNamespace>Stumble</RootNamespace>
     <LangVersion>latest</LangVersion>
-    <Version>0.2.0.0</Version>
+    <Version>0.3.0.0</Version>
     <!-- Point this at your Hollow Knight install folder. -->
     <GameDir>C:\Program Files (x86)\Steam\steamapps\common\Hollow Knight</GameDir>
     <ManagedDir>$(GameDir)\hollow_knight_Data\Managed</ManagedDir>
@@ -53,6 +53,15 @@
     </Reference>
     <Reference Include="MonoMod.Utils">
       <HintPath>$(ManagedDir)\MonoMod.Utils.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- HKMP, for Multiplayer Help-Ups. Needed to build, but not to play:
+       Stumble only touches it when HKMP is installed and the option is on. -->
+  <ItemGroup>
+    <Reference Include="HKMP">
+      <HintPath>$(ManagedDir)\Mods\HKMP\HKMP.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>

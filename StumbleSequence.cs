@@ -75,6 +75,11 @@ namespace Stumble
             // Impact and landings (see StumbleEffects.cs).
             public bool Impacted;         // the body has hit the floor
             public float TimeDown;        // seconds since the impact; MinLieTime uses this
+            public bool HelpedUp;         // multiplayer: another player helped them up
+            public bool Lying;            // in the lying stage (after the fall)
+            public tk2dSpriteAnimationClip LiftClip; // multiplayer: being lifted by a helper, or null
+            public ushort LiftHelper;     // which player is lifting them
+            public tk2dSpriteAnimationClip StruggleClip; // multiplayer: struggling to get up, or null
             public bool ThudPlayed;       // this trip's thud has played (the mod's or the game's)
             public float AirTime;         // seconds in the air in the current drop
             public bool GameSawFlight;    // the game noticed the Knight leave the ground
@@ -175,6 +180,8 @@ namespace Stumble
             // over from the fall finishes here, and if the Knight went over a
             // ledge they keep falling in this pose until they land.
             t.Anim.Play(t.LyingClip);
+            t.Lying = true;
+            TellOthers(TripPhase.Lying);
 
             // The body hits the floor, if it hasn't already. If the Knight is
             // in mid-air here (went over a ledge), the impact is their landing
@@ -192,29 +199,59 @@ namespace Stumble
                 {
                     t.RestartLieClock = false;
                     t.TimeDown = 0f;
+                    t.LiftClip = null;
+                    t.StruggleClip = null;
                     t.Anim.Play(t.LyingClip);
                 }
 
+                // Multiplayer: another player is holding Up next to them, so
+                // they're being lifted (the lift stops at the kneel by itself).
+                if (t.LiftClip != null)
+                {
+                    if (t.Anim.CurrentClip != t.LiftClip) t.Anim.Play(t.LiftClip);
+                }
+                // Multiplayer: mid-struggle; lie back down when it's over.
+                else if (t.StruggleClip != null && t.Anim.CurrentClip == t.StruggleClip && t.Anim.Playing)
+                {
+                }
                 // Something else played over the lying pose. Let the map
                 // finish being put away, then lie back down.
-                if (t.Anim.CurrentClip != t.LyingClip
-                    && !(t.Anim.Playing && IsMapClip(t.Anim.CurrentClip)))
-                    t.Anim.Play(t.LyingClip);
+                else
+                {
+                    t.StruggleClip = null;
+                    if (t.Anim.CurrentClip != t.LyingClip
+                        && !(t.Anim.Playing && IsMapClip(t.Anim.CurrentClip)))
+                        t.Anim.Play(t.LyingClip);
+                }
 
-                // Only stand up from solid ground, and never mid-cutscene.
-                // WasPressed (not IsPressed) so holding the direction you were
-                // running in doesn't instantly stand you back up.
-                if (!t.ExternalHold && t.TimeDown >= _settings.MinLieTime && t.Grounded
-                    && MovePressedThisFrame()) break;
+                // Only stand up from solid ground, and never mid-cutscene:
+                // either helped up by another player (multiplayer), or alone
+                // once the minimum time is up. WasPressed (not IsPressed) so
+                // holding the direction you were running in doesn't instantly
+                // stand you back up.
+                bool pressed = MovePressedThisFrame();
+                bool waitOver = t.TimeDown >= MinLieTimeNow();
+                if (!t.ExternalHold && t.Grounded && (t.HelpedUp || (waitOver && pressed))) break;
+
+                // Multiplayer: trying to get up before the wait is over is a
+                // struggle, which everyone in the room sees.
+                if (pressed && !waitOver && CanStruggle && !t.ExternalHold && t.Grounded) StartStruggle(t);
 
                 yield return null;
             }
 
-            // Get back up.
-            if (t.RiseClip != null)
+            // Get back up. Helped up after being lifted to a kneel: carry on
+            // from the kneel instead of starting from the floor again.
+            TellOthers(TripPhase.Rising);
+            tk2dSpriteAnimationClip rise = t.HelpedUp && t.LiftClip != null
+                ? RiseFromKneelClip(t.RiseClip) ?? t.RiseClip
+                : t.RiseClip;
+            t.LiftClip = null;
+            t.StruggleClip = null;
+            if (rise != null)
             {
-                t.Anim.Play(t.RiseClip);
-                float duration = Mathf.Min(ClipLength(t.RiseClip), MaxRiseTime);
+                t.Anim.Play(rise);
+                float duration = Mathf.Min(ClipLength(rise), MaxRiseTime);
                 for (float elapsed = 0f; elapsed < duration; elapsed += Time.deltaTime)
                 {
                     if (_trip != t || HandleInterruption(t)) yield break;

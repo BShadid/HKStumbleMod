@@ -5,13 +5,15 @@ settings file, and what the mod writes to the log.
 
 ## Building
 
-You need Hollow Knight 1.5 with the Modding API installed (through Lumafly,
-**before** building: the project compiles against the Modding API's version of
-`Assembly-CSharp.dll`) and the .NET SDK (any recent version).
+You need Hollow Knight 1.5 with the Modding API and HKMP installed (through
+Lumafly, **before** building: the project compiles against the Modding API's
+version of `Assembly-CSharp.dll`, and against HKMP for Multiplayer Help-Ups)
+and the .NET SDK (any recent version). Players don't need HKMP: Stumble only
+touches it when it's installed and Multiplayer Help-Ups is on.
 
 1. Open `Stumble.csproj` and set `GameDir` to your Hollow Knight install folder.
 2. Run `dotnet build -c Release` in a folder containing `Stumble.csproj` and the
-   seven source files listed below, and no other `.cs` files (the build compiles
+   nine source files listed below, and no other `.cs` files (the build compiles
    every `.cs` file in the folder and its subfolders).
 
 The build copies `Stumble.dll` into `hollow_knight_Data/Managed/Mods/Stumble/`
@@ -23,14 +25,22 @@ Every release from v0.2, the Preloaded Tinkables Update, onward needs:
 
 1. **The Path of Pain, cleared on the hardest settings:** Knight Clumsiness and
    Wall Clumsiness both on Very High, with every other setting at its default,
-   on the build being released. No exceptions.
+   on the build being released. From v0.3, No Knight Left Behind, onward, the
+   clear is made while hosting an HKMP server with Multiplayer Help-Ups on,
+   since that changes how long a fallen Knight stays down (naps included). No
+   exceptions.
 2. The version updated in both `StumbleMod.cs` (`GetVersion`) and
-   `Stumble.csproj`, as four numbers (`0.2.0.0`).
+   `Stumble.csproj`, as four numbers (`0.3.0.0`). Test builds count up the
+   last number (`0.3.0.1`, `0.3.0.2`, ...); the release goes back to `.0`.
 3. The high-risk checks in the test plan passed on that build.
 4. A GitHub release tagged `vX.Y` with `Stumble.dll` zipped as `Stumble.zip`.
 5. A pull request to [modlinks](https://github.com/hk-modding/modlinks)
    updating Stumble's entry: the version, the release link, and the zip's
-   SHA256 (without the `sha256:` prefix).
+   SHA256 (without the `sha256:` prefix). Keep the `<Integrations>` line for
+   HKMP.
+6. If the multiplayer messages changed, `StumbleHkmp.ProtocolVersion` went
+   up, so players on older versions can't connect to newer ones (and get
+   HKMP's add-on mismatch message instead of a broken game).
 
 ## Source files
 
@@ -41,7 +51,9 @@ Every release from v0.2, the Preloaded Tinkables Update, onward needs:
 | `StumbleEffects.cs` | The fall animation, the thud and landing sounds, and the landing dust. |
 | `StumbleDiagnostics.cs` | Log output for troubleshooting. |
 | `StumbleSlip.cs` | Wall slips: losing grip as a wall is caught or while clinging, the no-grab window and startle that follow, and the spark where the grip goes. |
-| `StumbleMenu.cs` | The in-game options menu: the mod's on/off switch, Knight Clumsiness, Wall Clumsiness and Detailed Logging. |
+| `StumbleMultiplayer.cs` | Multiplayer Help-Ups as the rest of the mod sees it: setting up the HKMP add-on, the longer time down while a helper is in the room, and being helped up. No HKMP types, so it loads without HKMP. |
+| `StumbleHkmp.cs` | The HKMP add-on: the messages between players and the server, and holding Up next to a fallen player. Only runs with HKMP installed and Multiplayer Help-Ups on. |
+| `StumbleMenu.cs` | The in-game options menu: the mod's on/off switch, Knight Clumsiness, Wall Clumsiness, Multiplayer Help-Ups and Detailed Logging. |
 | `StumbleSettings.cs` | The settings, their defaults, the safe ranges for hand-edited values, and the timing behind each clumsiness level. |
 
 Common changes:
@@ -64,8 +76,8 @@ Common changes:
 
 Every setting is saved to `Stumble.GlobalSettings.json` in the game's save
 folder. The in-game menu offers the on/off switch, Knight Clumsiness, Wall
-Clumsiness and Detailed Logging; everything else in the table below is changed
-here. The file is created the first time the game saves settings, usually when
+Clumsiness, Multiplayer Help-Ups and Detailed Logging; everything else in the
+table below is changed here. The file is created the first time the game saves settings, usually when
 you quit or change a setting in the menu. Edit it with the game closed; delete
 it to go back to the defaults.
 
@@ -77,6 +89,9 @@ it to go back to the defaults.
 | SlipNoDoubleJumpTime | 0.25 | Seconds at the start of that window (the startle) during which double jumps don't work either, so a jump pressed out of habit as they slip doesn't save them. Never longer than SlipNoGrabTime; 0 turns it off. |
 | SlipSound | sword_hit_reject | Sound played on a wall slip, by name from `Stumble.Sounds.txt` (see Auditioning sounds). The default is the nail's "tink" off something it can't cut. A clip that isn't one of the Knight's own sounds is kept once found, so it keeps playing in other areas. Blank plays nothing. |
 | SlipEffect | Tink | Effect where the Knight loses their grip: `Tink` (the spark the nail makes off something it can't cut, preloaded at start-up), the name of one of the Knight's own effects (e.g. `Wall Puff`; see Auditioning effects), or blank for none. |
+| MultiplayerHelpUps | false | With HKMP: helping each other up. Everyone on the server needs the same setting to connect. Takes effect when the game starts. |
+| MultiplayerLieTime | 30 | Multiplayer: seconds down before a fallen Knight can get up alone, while connected to a server (whether or not anyone is nearby). |
+| HelpUpTime | 1.5 | Multiplayer: seconds of holding Up next to a fallen Knight to help them up. |
 | MinLieTime | 0.35 | Seconds on the ground before a left/right press stands them up, counted from the impact: when the trip thud plays (or would, if it's off), or the landing after a tumble. |
 | FallAnimation | true | Play the stand-up animation in reverse as a fall. |
 | FallSpeed | 1.5 | How much faster than standing up the fall plays. |
@@ -187,6 +202,37 @@ that list.
   window. If `CancelWallsliding` can't be found, slips are skipped and a
   warning is logged.
 - Switching the mod off mid-trip stands the Knight back up.
+- Multiplayer Help-Ups registers a client and a server add-on with HKMP at
+  start-up (only if HKMP is loaded; the HKMP code is in its own class, so
+  Stumble never looks for HKMP's DLL otherwise). HKMP matches networked
+  add-ons by name and version on connect, so the add-on's version is the
+  message format (`StumbleHkmp.ProtocolVersion`), not the mod's: change it
+  only when the messages change. Each game sends its Knight's trip stage (up,
+  falling, lying, getting up) when it changes and once a second; the server
+  passes it to players in the same room. Each game shows other players' trips
+  itself from that stage, with its own trip animations: the fall once, the
+  lying pose held (put back every frame if anything, HKMP included, plays over
+  it), the stand-up once, then HKMP's animations take over again. HKMP isn't
+  relied on for any of it, since it skips some animations, such as the held
+  lying pose. While connected, getting up
+  alone waits MultiplayerLieTime instead of MinLieTime, whether or not anyone
+  is nearby. Pressing left or right before then makes the Knight struggle:
+  part of the stand-up animation up and back down, which a Struggle message
+  shows in everyone else's game in the room. A fallen Knight also struggles
+  once on a player's screen when that player (standing, in control) first
+  comes within reach of them. There's no on-screen prompt: the struggles, and
+  the hint in HKMP's chat on connecting, are how players learn they can help. Only a
+  player lying down (not still falling) can be helped. Holding Up within
+  reach sends a help progress message (started, with the helper's
+  HelpUpTime; or stopped), which the server passes to the fallen player and
+  everyone else in the room. Every game then lifts that Knight with the first
+  part of the stand-up animation, up to the kneel (the first held pose),
+  stretched over HelpUpTime; letting go drops them back to lying. Holding for
+  HelpUpTime sends a help-up, which the server passes to that player's game;
+  they stand as soon as they're on solid ground (still not during a
+  cutscene), carrying on from the kneel. A hit still stands a fallen Knight up, as in single player. On connecting,
+  the add-on posts a one-line hint in HKMP's chat (a hint, not instructions:
+  helping up is meant to be figured out).
 
 ## Log messages
 
@@ -198,7 +244,7 @@ Always written:
 - control was handed back because the Knight was held in mid-air;
 - a configured animation can't be found (lists every animation the Knight has,
   so the right name can go in `LyingClip` / `RiseClip`; no rebuild needed);
-- menu buttons that couldn't be switched off during trips;
+- menu buttons that exist but couldn't be switched off during trips;
 - the game's way of letting go of a wall couldn't be found, so wall slips are off;
 - the game's way of giving back the double jump and air dash couldn't be found
   (once, on the first slip);
@@ -212,17 +258,29 @@ Always written:
   `doubleJumpQueuing` couldn't be found (at start-up; the startle after a slip
   is then partly or fully missing);
 - a `SlipSound` name that isn't one of the Knight's sounds or a loaded sound (once per name);
-- `Stumble.Sounds.txt` couldn't be written.
+- `Stumble.Sounds.txt` couldn't be written;
+- Multiplayer Help-Ups is on but HKMP isn't installed, or the add-on couldn't
+  be set up (at start-up), and a reminder when it's on that everyone on a
+  server needs it;
+- the Up button couldn't be found, so helping others up won't work.
 
 Only with DetailedLogging on:
 
 - the stand-up animation's frame list (see Fine-tuning the fall);
+- menu buttons this game version doesn't have (so there's nothing to block);
 - what the Knight lands on, once per object per session (names it and lists
   what it's made of, plus every other object around their feet);
 - areas re-entered after standing up (names them);
 - state changes of the game's map, inventory and Knight state machines while they're down;
 - the first time per session they move with the map button held but can't trip;
 - each time `Stumble.Sounds.txt` is updated, with the number of sounds listed;
+- multiplayer, each line tagged with this player's HKMP name (both games may
+  share one `ModLog.txt` when testing on one PC): other players' trip stages as
+  they change; holding Up next to a fallen player, stopping early (and why),
+  and helping them up; holding Up with nobody fallen within reach (with the
+  nearest fallen player's distance and the reach), or while unable to help;
+  being helped up, or a help arriving when not down; being lifted by a helper,
+  and the helper stopping; another player struggling to get up;
 - the Knight's effects, on the first wall slip (for SlipEffect);
 - the tink spark when the mod gets it (what it is, and whether it was preloaded or found in game);
 - that the wall puff is standing in because no tink spark is loaded yet (once);
