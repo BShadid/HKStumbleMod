@@ -43,6 +43,8 @@ In the game, go to **Options > Mods > Stumble**.
 
 ## Multiplayer
 
+![Hold up.](stumble-help.gif)
+
 With [HKMP](https://github.com/Extremelyd1/HKMP) installed, turn on
 **Multiplayer Help-Ups** and restart the game. Then, on a server where
 everyone has it on:
